@@ -1,9 +1,10 @@
 #!/bin/bash
-# Install Dnsmasq and configure it to forward requests for a specific domain to Consul. This script has been tested
+# Configure systemd-resolved it to forward requests for a specific domain to Consul. This script has been tested
 # with the following operating systems:
 #
-# 1. Ubuntu 16.04
-# 2. Amazon Linux 2
+# 1. Ubuntu 18.04
+# See https://learn.hashicorp.com/consul/security-networking/forwarding#systemd-resolved-setup for more details
+# Github Issue: https://github.com/hashicorp/consul/issues/4155
 
 set -e
 
@@ -11,16 +12,15 @@ readonly DEFAULT_CONSUL_DOMAIN="consul"
 readonly DEFAULT_CONSUL_IP="127.0.0.1"
 readonly DEFAULT_CONSUL_DNS_PORT=8600
 
-readonly DNS_MASQ_CONFIG_DIR="/etc/dnsmasq.d"
-readonly CONSUL_DNS_MASQ_CONFIG_FILE="$DNS_MASQ_CONFIG_DIR/10-consul"
+readonly SYSTEMD_RESVOLDED_CONFIG_FILE="/etc/systemd/resolved.conf"
 
 readonly SCRIPT_NAME="$(basename "$0")"
 
 function print_usage {
   echo
-  echo "Usage: install-dnsmasq [OPTIONS]"
+  echo "Usage: setup-systemd-resolved [OPTIONS]"
   echo
-  echo "Install Dnsmasq and configure it to forward requests for a specific domain to Consul. This script has been tested with Ubuntu 16.04 and Amazon Linux 2."
+  echo "Configure systemd-resolved to forward requests for a specific domain to Consul. This script has been tested with Ubuntu 18.04."
   echo
   echo "Options:"
   echo
@@ -30,7 +30,7 @@ function print_usage {
   echo
   echo "Example:"
   echo
-  echo "  install-dnsmasq"
+  echo "  setup-systemd-resolved"
 }
 
 function log {
@@ -66,49 +66,35 @@ function assert_not_empty {
   fi
 }
 
-function has_yum {
-  [[ -n "$(command -v yum)" ]]
-}
-
-function has_apt_get {
-  [[ -n "$(command -v apt-get)" ]]
-}
-
-function install_dnsmasq {
+function install_dependencies {
   local -r consul_ip="$1"
 
-  log_info "Installing Dnsmasq"
-
-  if $(has_apt_get); then
-    sudo apt-get update -y
-    sudo apt-get install -y dnsmasq
-  elif $(has_yum); then
-    sudo yum update -y
-    sudo yum install -y dnsmasq
-    echo "prepend domain-name-servers $consul_ip;" | sudo tee -a "/etc/dhcp/dhclient.conf" > /dev/null
-    echo "conf-dir=$DNS_MASQ_CONFIG_DIR" | sudo tee -a "/etc/dnsmasq.conf" > /dev/null
-    sudo chkconfig dnsmasq on
-  else
-    log_error "Could not find apt-get or yum. Cannot install on this OS."
-    exit 1
-  fi
+  log_info "Installing dependencies"
+  sudo apt-get update -y
+  echo iptables-persistent iptables-persistent/autosave_v4 boolean true | sudo debconf-set-selections
+  echo iptables-persistent iptables-persistent/autosave_v6 boolean true | sudo debconf-set-selections
+  sudo apt-get install -y iptables-persistent
 }
 
-function write_consul_config {
+function configure_systemd_resolved {
   local -r consul_domain="$1"
   local -r consul_ip="$2"
   local -r consul_port="$3"
 
-  log_info "Configuring Dnsmasq to forward lookups of the '$consul_domain' domain to $consul_ip:$consul_port in $CONSUL_DNS_MASQ_CONFIG_FILE"
-  mkdir -p "$DNS_MASQ_CONFIG_DIR"
+  UBUNTU_VERSION=`lsb_release -s -r`
+  if [ "$UBUNTU_VERSION" == "18.04" ]; then
+    log_info "Configuring systemd-resolved to forward lookups of the '$consul_domain' domain to $consul_ip:$consul_port in $CONSUL_DNS_MASQ_CONFIG_FILE"
 
-  sudo tee "$CONSUL_DNS_MASQ_CONFIG_FILE" <<EOF
-# Enable forward lookup of the '$consul_domain' domain:
-server=/${consul_domain}/${consul_ip}#${consul_port}
-
-listen-address=${consul_ip}
-bind-interfaces
-EOF
+    sudo iptables -t nat -A OUTPUT -d localhost -p udp -m udp --dport 53 -j REDIRECT --to-ports $consul_port
+    sudo iptables -t nat -A OUTPUT -d localhost -p tcp -m tcp --dport 53 -j REDIRECT --to-ports $consul_port
+    sudo iptables-save | sudo tee /etc/iptables/rules.v4
+    sudo ip6tables-save | sudo tee /etc/iptables/rules.v6
+    sudo sed -i "s/#DNS=/DNS=${consul_ip}/g" "$SYSTEMD_RESVOLDED_CONFIG_FILE"
+    sudo sed -i "s/#Domains=/Domains=~${consul_domain}/g" "$SYSTEMD_RESVOLDED_CONFIG_FILE"
+  else
+    log_error "Cannot install on this OS."
+    exit 1
+  fi
 }
 
 function install {
@@ -149,10 +135,10 @@ function install {
     shift
   done
 
-  log_info "Starting Dnsmasq install"
-  install_dnsmasq "$consul_ip"
-  write_consul_config "$consul_domain" "$consul_ip" "$consul_dns_port"
-  log_info "Dnsmasq install complete!"
+  log_info "Configuring systemd-resolved"
+  install_dependencies
+  configure_systemd_resolved "$consul_domain" "$consul_ip" "$consul_dns_port"
+  log_info "systemd-resolved configured!"
 }
 
 install "$@"

@@ -8,6 +8,8 @@ would typically run alongside your apps:
 
 ![Consul architecture](https://github.com/hashicorp/terraform-aws-consul/blob/master/_docs/architecture.png?raw=true)
 
+The Consul server nodes are launched using a custom autoscaling service-linked role for the autoscaling group instead of the default autoscaling service-linked role.  This enables a  custom role to be assigned which may be desired for using KMS encrypted AMIs.  [More Information](https://forums.aws.amazon.com/thread.jspa?threadID=277523)
+
 You will need to create an [Amazon Machine Image (AMI)](http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/AMIs.html) 
 that has Consul installed, which you can do using the [consul-ami example](https://github.com/hashicorp/terraform-aws-consul/tree/master/examples/consul-ami)). Note that to keep 
 this example simple, both the server ASG and client ASG are running the exact same AMI. In real-world usage, you'd 

@@ -1,6 +1,7 @@
+[![Maintained by Gruntwork.io](https://img.shields.io/badge/maintained%20by-gruntwork.io-%235849a6.svg)](https://gruntwork.io/?ref=repo_aws_consul)
 # Consul AWS Module
 
-This repo contains a Module for how to deploy a [Consul](https://www.consul.io/) cluster on 
+This repo contains a set of modules in the [modules folder](https://github.com/hashicorp/terraform-aws-consul/tree/master/modules) for deploying a [Consul](https://www.consul.io/) cluster on 
 [AWS](https://aws.amazon.com/) using [Terraform](https://www.terraform.io/). Consul is a distributed, highly-available 
 tool that you can use for service discovery and key/value storage. A Consul cluster typically includes a small number
 of server nodes, which are responsible for being part of the [consensus 
@@ -13,23 +14,22 @@ run alongside your apps:
 
 ## How to use this Module
 
-Each Module has the following folder structure:
+This repo has the following folder structure:
 
-* [root](https://github.com/hashicorp/terraform-aws-consul/tree/master): This folder shows an example of Terraform code 
-  that uses the [consul-cluster](https://github.com/hashicorp/terraform-aws-consul/tree/master/modules/consul-cluster) 
-  module to deploy a [Consul](https://www.consul.io/) cluster in [AWS](https://aws.amazon.com/).
-* [modules](https://github.com/hashicorp/terraform-aws-consul/tree/master/modules): This folder contains the reusable code for this Module, broken down into one or more modules.
-* [examples](https://github.com/hashicorp/terraform-aws-consul/tree/master/examples): This folder contains examples of how to use the modules.
+* [modules](https://github.com/hashicorp/terraform-aws-consul/tree/master/modules): This folder contains several standalone, reusable, production-grade modules that you can use to deploy Consul.
+* [examples](https://github.com/hashicorp/terraform-aws-consul/tree/master/examples): This folder shows examples of different ways to combine the modules in the `modules` folder to deploy Consul.
 * [test](https://github.com/hashicorp/terraform-aws-consul/tree/master/test): Automated tests for the modules and examples.
+* [root folder](https://github.com/hashicorp/terraform-aws-consul/tree/master): The root folder is *an example* of how to use the [consul-cluster module](https://github.com/hashicorp/terraform-aws-consul/tree/master/modules/consul-cluster) 
+  module to deploy a [Consul](https://www.consul.io/) cluster in [AWS](https://aws.amazon.com/). The Terraform Registry requires the root of every repo to contain Terraform code, so we've put one of the examples there. This example is great for learning and experimenting, but for production use, please use the underlying modules in the [modules folder](https://github.com/hashicorp/terraform-aws-consul/tree/master/modules) directly.
 
-To deploy Consul servers using this Module:
+To deploy Consul servers for production using this repo:
 
 1. Create a Consul AMI using a Packer template that references the [install-consul module](https://github.com/hashicorp/terraform-aws-consul/tree/master/modules/install-consul).
    Here is an [example Packer template](https://github.com/hashicorp/terraform-aws-consul/tree/master/examples/consul-ami#quick-start). 
    
    If you are just experimenting with this Module, you may find it more convenient to use one of our official public AMIs:
    - [Latest Ubuntu 16 AMIs](https://github.com/hashicorp/terraform-aws-consul/tree/master/_docs/ubuntu16-ami-list.md).
-   - [Latest Amazon Linux AMIs](https://github.com/hashicorp/terraform-aws-consul/tree/master/_docs/amazon-linux-ami-list.md).
+   - [Latest Amazon Linux 2 AMIs](https://github.com/hashicorp/terraform-aws-consul/tree/master/_docs/amazon-linux-ami-list.md).
   
     **WARNING! Do NOT use these AMIs in your production setup. In production, you should build your own AMIs in your own 
     AWS account.**
@@ -39,12 +39,12 @@ To deploy Consul servers using this Module:
    Instance in the Auto Scaling Group to form the Consul cluster. Here is [an example Terraform 
    configuration](https://github.com/hashicorp/terraform-aws-consul/tree/master/examples/root-example#quick-start) to provision a Consul cluster.
 
-To deploy Consul clients using this Module:
+To deploy Consul clients for production using this repo:
  
 1. Use the [install-consul module](https://github.com/hashicorp/terraform-aws-consul/tree/master/modules/install-consul) to install Consul alongside your application code.
 1. Before booting your app, execute the [run-consul script](https://github.com/hashicorp/terraform-aws-consul/tree/master/modules/run-consul) with `--client` flag.
-1. Your app can now using the local Consul agent for service discovery and key/value storage. 
-1. Optionally, you can use the [install-dnsmasq module](https://github.com/hashicorp/terraform-aws-consul/tree/master/modules/install-dnsmasq) to configure Consul as the DNS for a
+1. Your app can now use the local Consul agent for service discovery and key/value storage.
+1. Optionally, you can use the [install-dnsmasq module](https://github.com/hashicorp/terraform-aws-consul/tree/master/modules/install-dnsmasq) for Ubuntu 16.04 and Amazon Linux 2 or [setup-systemd-resolved](https://github.com/hashicorp/terraform-aws-consul/tree/master/modules/setup-systemd-resolved) for Ubuntu 18.04 to configure Consul as the DNS for a
    specific domain (e.g. `.consul`) so that URLs such as `foo.service.consul` resolve automatically to the IP 
    address(es) for a service `foo` registered in Consul (all other domain names will be continue to resolve using the
    default resolver on the OS).
@@ -94,7 +94,11 @@ Gruntwork can help with:
   to create the cluster.
 
 * [install-dnsmasq module](https://github.com/hashicorp/terraform-aws-consul/tree/master/modules/install-dnsmasq): Install [Dnsmasq](http://www.thekelleys.org.uk/dnsmasq/doc.html)
-  and configure it to forward requests for a specific domain to Consul. This allows you to use Consul as a DNS server
+  for Ubuntu 16.04 and Amazon Linux 2 and configure it to forward requests for a specific domain to Consul. This allows you to use Consul as a DNS server
+  for URLs such as `foo.service.consul`.
+
+* [setup-systemd-resolved module](https://github.com/hashicorp/terraform-aws-consul/tree/master/modules/setup-systemd-resolved): Setup [systemd-resolved](https://www.freedesktop.org/software/systemd/man/resolved.conf.html)
+  for ubuntu 18.04 and configure it to forward requests for a specific domain to Consul. This allows you to use Consul as a DNS server
   for URLs such as `foo.service.consul`.
 
 * [consul-iam-policies](https://github.com/hashicorp/terraform-aws-consul/tree/master/modules/consul-iam-policies): Defines the IAM policies necessary for a Consul cluster. 

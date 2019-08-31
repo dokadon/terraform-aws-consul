@@ -75,7 +75,7 @@ variable "enable_rpc_encryption" {
 variable "gossip_encryption_key" {
   description = "16 byte cryptographic key to encrypt gossip traffic between nodes. Must set 'enable_gossip_encryption' to true for this to take effect. WARNING: Setting the encryption key here means it will be stored in plain text. We're doing this here to keep the example simple, but in production you should inject it more securely, e.g. retrieving it from KMS."
   type        = string
-  default     = ""
+  default     = null
 }
 
 variable "ca_path" {
@@ -94,5 +94,11 @@ variable "key_file_path" {
   description = "Path to the certificate key used to verify incoming connections."
   type        = string
   default     = "/opt/consul/tls/consul.key.pem"
+}
+
+variable "consul_service_linked_role_suffix" {
+  description = "Suffix for the aws_iam_service_linked_role created for the consul cluster auto scaling group to use"
+  type        = string
+  default     = "test-consul-service-linked-role"
 }
 

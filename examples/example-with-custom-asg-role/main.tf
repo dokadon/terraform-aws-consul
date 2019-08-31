@@ -15,6 +15,15 @@ terraform {
 }
 
 # ---------------------------------------------------------------------------------------------------------------------
+# Create a custom role for consul
+# ---------------------------------------------------------------------------------------------------------------------
+resource "aws_iam_service_linked_role" "consul_asg_role" {
+  aws_service_name = "autoscaling.amazonaws.com"
+  custom_suffix    = var.consul_service_linked_role_suffix
+  description      = "Service-Linked Role enables access to AWS Services and Resources used or managed by Auto Scaling"
+}
+
+# ---------------------------------------------------------------------------------------------------------------------
 # DEPLOY THE CONSUL SERVER NODES
 # ---------------------------------------------------------------------------------------------------------------------
 
@@ -24,10 +33,11 @@ module "consul_servers" {
   # source = "git::git@github.com:hashicorp/terraform-aws-consul.git//modules/consul-cluster?ref=v0.0.1"
   source = "../../modules/consul-cluster"
 
-  cluster_name  = "${var.cluster_name}-server"
-  cluster_size  = var.num_servers
-  instance_type = "t2.micro"
-  spot_price    = var.spot_price
+  cluster_name            = "${var.cluster_name}-server"
+  cluster_size            = var.num_servers
+  instance_type           = "t2.micro"
+  spot_price              = var.spot_price
+  service_linked_role_arn = aws_iam_service_linked_role.consul_asg_role.arn
 
   # The EC2 Instances will use these tags to automatically discover each other and form a cluster
   cluster_tag_key   = var.cluster_tag_key

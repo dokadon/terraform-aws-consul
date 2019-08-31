@@ -1,16 +1,16 @@
 #!/bin/bash
 #
-# Build the example AMI, copy it to all AWS regions, and make all AMIs public. 
+# Build the example AMI, copy it to all AWS regions, and make all AMIs public.
 #
 # This script is meant to be run in a CircleCI job.
 #
 
 set -e
 
-readonly PACKER_TEMPLATE_PATH="/home/ubuntu/$CIRCLE_PROJECT_REPONAME/examples/consul-ami/consul.json"
+readonly PACKER_TEMPLATE_PATH="/go/src/github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME/examples/consul-ami/consul.json"
 readonly PACKER_TEMPLATE_DEFAULT_REGION="us-east-1"
 readonly AMI_PROPERTIES_FILE="/tmp/ami.properties"
-readonly AMI_LIST_MARKDOWN_DIR="/home/ubuntu/$CIRCLE_PROJECT_REPONAME/_docs"
+readonly AMI_LIST_MARKDOWN_DIR="/go/src/github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME/_docs"
 readonly GIT_COMMIT_MESSAGE="Add latest AMI IDs."
 readonly GIT_USER_NAME="gruntwork-ci"
 readonly GIT_USER_EMAIL="ci@gruntwork.io"
@@ -25,6 +25,18 @@ if [[ -z "$PACKER_BUILD_NAME" ]]; then
   echo "ERROR: You must pass in the Packer build name as the first argument to this function."
   exit 1
 fi
+
+if [[ -z "$PUBLISH_AMI_AWS_ACCESS_KEY_ID" || -z "$PUBLISH_AMI_AWS_SECRET_ACCESS_KEY" ]]; then
+  echo "The PUBLISH_AMI_AWS_ACCESS_KEY_ID and PUBLISH_AMI_AWS_SECRET_ACCESS_KEY environment variables must be set to the AWS credentials to use to publish the AMIs."
+  exit 1
+fi
+
+echo "Checking out branch $BRANCH_NAME to make sure we do all work in a branch and not in detached HEAD state"
+git checkout "$BRANCH_NAME"
+
+# We publish the AMIs to a different AWS account, so set those credentials
+export AWS_ACCESS_KEY_ID="$PUBLISH_AMI_AWS_ACCESS_KEY_ID"
+export AWS_SECRET_ACCESS_KEY="$PUBLISH_AMI_AWS_SECRET_ACCESS_KEY"
 
 # Build the example AMI. WARNING! In a production setting, you should build your own AMI to ensure it has exactly the
 # configuration you want. We build this example AMI solely to make initial use of this Module as easy as possible.

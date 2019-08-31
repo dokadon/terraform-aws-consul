@@ -55,7 +55,7 @@ Note the following parameters:
 
 You can find the other parameters in [variables.tf](variables.tf).
 
-Check out the [consul-cluster example](https://github.com/hashicorp/terraform-aws-consul/tree/master/MAIN.md) for fully-working sample code.
+Check out the [consul-cluster example](https://github.com/hashicorp/terraform-aws-consul/tree/master/examples/root-example) for fully-working sample code.
 
 
 
@@ -66,11 +66,11 @@ Check out the [consul-cluster example](https://github.com/hashicorp/terraform-aw
 
 If you want to connect to the cluster from your own computer, the easiest way is to use the [HTTP
 API](https://www.consul.io/docs/agent/http.html). Note that this only works if the Consul cluster is running in public
-subnets and/or your default VPC (as in the [consul-cluster example](https://github.com/hashicorp/terraform-aws-consul/tree/master/MAIN.md)), which is OK for testing
+subnets and/or your default VPC (as in the [consul-cluster example](https://github.com/hashicorp/terraform-aws-consul/tree/master/examples/root-example)), which is OK for testing
 and experimentation, but NOT recommended for production usage.
 
 To use the HTTP API, you first need to get the public IP address of one of the Consul Servers. You can find Consul
-servers by using AWS tags. If you're running the [consul-cluster example](https://github.com/hashicorp/terraform-aws-consul/tree/master/MAIN.md), the
+servers by using AWS tags. If you're running the [consul-cluster example](https://github.com/hashicorp/terraform-aws-consul/tree/master/examples/root-example), the
 [consul-examples-helper.sh script](https://github.com/hashicorp/terraform-aws-consul/tree/master/examples/consul-examples-helper/consul-examples-helper.sh) will do the tag lookup
 for you automatically (note, you must have the [AWS CLI](https://aws.amazon.com/cli/),
 [jq](https://stedolan.github.io/jq/), and the [Consul agent](https://www.consul.io/) installed locally):
@@ -257,6 +257,7 @@ docs](https://github.com/hashicorp/terraform-aws-consul/tree/master/modules/run-
 
 The IAM Role ARN is exported as an output variable if you need to add additional permissions.
 
+You can disable the creation of the IAM role and policies if needed by setting `enable_iam_setup` variable to false.  This allows you to create the role seperately from this module and supply the external role arn via the `iam_instance_profile_name` variable.
 
 
 ## How do you roll out updates?
@@ -297,7 +298,7 @@ We will add a script in the future to automate this process (PRs are welcome!).
 
 There are two ways a Consul node may go down:
 
-1. The Consul process may crash. In that case, `supervisor` should restart it automatically.
+1. The Consul process may crash. In that case, `systemd` should restart it automatically.
 1. The EC2 Instance running Consul dies. In that case, the Auto Scaling Group should launch a replacement automatically.
    Note that in this case, since the Consul agent did not exit gracefully, and the replacement will have a different ID,
    you may have to manually clean out the old nodes using the [force-leave

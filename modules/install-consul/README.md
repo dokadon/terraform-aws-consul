@@ -8,7 +8,8 @@ This folder contains a script for installing Consul and its dependencies. Use th
 This script has been tested on the following operating systems:
 
 * Ubuntu 16.04
-* Amazon Linux
+* Ubuntu 18.04
+* Amazon Linux 2
 
 There is a good chance it will work on other flavors of Debian, CentOS, and RHEL as well.
 
@@ -33,8 +34,8 @@ join other nodes to form a cluster.
 We recommend running the `install-consul` script as part of a [Packer](https://www.packer.io/) template to create a
 Consul [Amazon Machine Image (AMI)](http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/AMIs.html) (see the 
 [consul-ami example](https://github.com/hashicorp/terraform-aws-consul/tree/master/examples/consul-ami) for a fully-working sample code). You can then deploy the AMI across an Auto 
-Scaling Group using the [consul-cluster module](https://github.com/hashicorp/terraform-aws-consul/tree/master/modules/consul-cluster) (see the [main 
-example](https://github.com/hashicorp/terraform-aws-consul/tree/master/MAIN.md) for fully-working sample code).
+Scaling Group using the [consul-cluster module](https://github.com/hashicorp/terraform-aws-consul/tree/master/modules/consul-cluster) (see the [consul-cluster 
+example](https://github.com/hashicorp/terraform-aws-consul/tree/master/examples/root-example) for fully-working sample code).
 
 
 
@@ -43,7 +44,8 @@ example](https://github.com/hashicorp/terraform-aws-consul/tree/master/MAIN.md) 
 
 The `install-consul` script accepts the following arguments:
 
-* `version VERSION`: Install Consul version VERSION. Required. 
+* `version VERSION`: Install Consul version VERSION. Optional if download-url is provided.
+* `download-url URL`: Install the Consul package hosted in this url. Optional if version is provided.
 * `path DIR`: Install Consul into folder DIR. Optional.
 * `user USER`: The install dirs will be owned by user USER. Optional.
 * `ca-file-path PATH`: Path to a PEM-encoded certificate authority used to encrypt and verify authenticity of client and server connections. Optional.
@@ -53,7 +55,7 @@ The `install-consul` script accepts the following arguments:
 Example:
 
 ```
-install-consul --version 0.8.0
+install-consul --version 1.2.2
 ```
 
 
@@ -62,16 +64,15 @@ install-consul --version 0.8.0
 
 The `install-consul` script does the following:
 
-1. [Create a user and folders for Consul](#create-a-user-and-folders-for-consul)
-1. [Install Consul binaries and scripts](#install-consul-binaries-and-scripts)
-1. [Install provided TLS certificates](#install-tls-certificates)
-1. [Install supervisord](#install-supervisord)
+1. [Creates a user and folders for Consul](#create-a-user-and-folders-for-consul)
+1. [Installs Consul binaries and scripts](#install-consul-binaries-and-scripts)
+1. [Installs provided TLS certificates](#install-tls-certificates)
 1. [Follow-up tasks](#follow-up-tasks)
 
 
-### Create a user and folders for Consul
+### Creates a user and folders for Consul
 
-Create an OS user named `consul`. Create the following folders, all owned by user `consul`:
+Creates an OS user named `consul`. Creates the following folders, all owned by user `consul`:
 
 * `/opt/consul`: base directory for Consul data (configurable via the `--path` argument).
 * `/opt/consul/bin`: directory for Consul binaries.
@@ -82,27 +83,22 @@ Create an OS user named `consul`. Create the following folders, all owned by use
 * `/opt/consul/tls/ca`: directory where an optional CA certificate is copied if provided.
 
 
-### Install Consul binaries and scripts
+### Installs Consul binaries and scripts
 
-Install the following:
+Installs the following:
 
-* `consul`: Download the Consul zip file from the [downloads page](https://www.consul.io/downloads.html) (the version 
-  number is configurable via the `--version` argument), and extract the `consul` binary into `/opt/consul/bin`. Add a
+* `consul`: Either downloads the Consul zip file from the [downloads page](https://www.consul.io/downloads.html) (the version
+  number is configurable via the `--version` argument), or a package hosted on a precise url configurable with `--dowload-url`
+  (useful for installing Consul Enterprise, for example) and extracts the `consul` binary into `/opt/consul/bin`. Adds a
   symlink to the `consul` binary in `/usr/local/bin`.
-* `run-consul`: Copy the [run-consul script](https://github.com/hashicorp/terraform-aws-consul/tree/master/modules/run-consul) into `/opt/consul/bin`. 
+* `run-consul`: Copies the [run-consul script](https://github.com/hashicorp/terraform-aws-consul/tree/master/modules/run-consul) into `/opt/consul/bin`.
 
-### Install TLS certificates
+### Installs TLS certificates
 
-Copy the certificates/key provided by the `--ca-file-path`, `cert-file-path` and `key-file-path` to the Consul
+Copies the certificates/key provided by the `--ca-file-path`, `cert-file-path` and `key-file-path` to the Consul
 configuration directory. If provided, the CA file is copied to `/opt/consul/tls/ca` and the server certificate/key
 are copied to `/opt/consul/tls` (assuming the default config path of `/opt/consul`). The script also sets the
 required permissions and file ownership.
-
-### Install supervisord
-
-Install [supervisord](http://supervisord.org/). We use it as a cross-platform supervisor to ensure Consul is started
-whenever the system boots and restarted if the Consul process crashes.
-
 
 ### Follow-up tasks
 
@@ -112,7 +108,15 @@ After the `install-consul` script finishes running, you may wish to do the follo
    `/opt/consul/config`).
 1. If `/usr/local/bin` isn't already part of `PATH`, you should add it so you can run the `consul` command without
    specifying the full path.
-   
+
+
+
+## Dependencies
+
+The install script assumes that `systemd` is already installed.  We use it as a cross-platform supervisor to ensure Consul is started
+whenever the system boots and restarted if the Consul process crashes.  Additionally, it is used to store all logs which can be accessed
+using `journalctl`.
+
 
 
 ## Why use Git to install this code?
